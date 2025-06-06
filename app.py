@@ -3,22 +3,25 @@ import pandas as pd
 
 st.title("🧬 SARS-CoV-2 Variant Monitoring Dashboard")
 
-uploaded_file = st.file_uploader("Upload your SARS-CoV-2 data (.csv)", type="csv")
+uploaded_file = st.file_uploader("Upload your Nextclade CSV", type="csv")
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.subheader("📄 Preview of Uploaded Data")
-    st.write(df.head())
+    try:
+        # Try reading with semicolon delimiter
+        df = pd.read_csv(uploaded_file, sep=";")
+        st.success("✅ File uploaded successfully!")
+        st.subheader("📄 Data Preview")
+        st.dataframe(df.head())
 
-    st.subheader("📊 Summary")
-    st.write(df.describe())
-
-    st.subheader("🧪 Mutation Frequency")
-    mutation_cols = [col for col in df.columns if col.startswith("S:")]
-    if mutation_cols:
-        mutation_summary = df[mutation_cols].sum().sort_values(ascending=False)
-        st.bar_chart(mutation_summary)
-    else:
-        st.warning("No mutation columns found (e.g., columns starting with 'S:').")
+        # Display mutation frequency (if aaSubstitutions column exists)
+        if "aaSubstitutions" in df.columns:
+            st.subheader("🧬 Most Common Amino Acid Substitutions")
+            mutation_series = df["aaSubstitutions"].dropna().str.split(",").explode()
+            top_mutations = mutation_series.value_counts().head(10)
+            st.bar_chart(top_mutations)
+        else:
+            st.warning("Column 'aaSubstitutions' not found in the uploaded file.")
+    except Exception as e:
+        st.error(f"❌ Error reading file: {e}")
 else:
-    st.info("Please upload a CSV file to begin.")
+    st.info("📁 Please upload a Nextclade `.csv` file to begin.")
